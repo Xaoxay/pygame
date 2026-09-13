@@ -30,17 +30,18 @@ jobs:
 
       - name: Build with Buildozer
         run: |
-          yes | buildozer -v android debug > build.log 2>&1 || { tail -n 150 build.log; exit 1; }
+          buildozer -v android debug > build.log 2>&1 || { tail -n 150 build.log; exit 1; }
 
       - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: buildozer-debug-logs
-          path: .buildozer/**/*.log
+          path: build.log
           
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: NeonBrickBreaker-APK
           path: bin/*.apk
+          if-no-files-found: error
