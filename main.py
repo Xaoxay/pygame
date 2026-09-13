@@ -3,8 +3,6 @@ from kivy.app import App
 from kivy.core.audio import SoundLoader
 import math
 import random
-import wave
-import struct
 import os
 from kivy.clock import Clock
 from kivy.core.window import Window
@@ -13,7 +11,6 @@ from kivy.uix.widget import Widget
 from kivy.uix.label import Label
 from kivy.storage.jsonstore import JsonStore
 from os.path import join
-import webbrowser
 import math
 
 from game import Game, LEVELS
@@ -40,6 +37,8 @@ def get_sfx_path(name):
     return os.path.join(data_dir, name)
 
 def create_sfx():
+    import wave
+    import struct
     if os.path.exists(get_sfx_path('bounce.wav')): return
     def save(name, freq_start, freq_end, duration, vol=0.5, wave_type='sq'):
         with wave.open(get_sfx_path(name), 'w') as f:
@@ -62,24 +61,34 @@ def create_sfx():
                 frames.append(struct.pack('<h', sample))
             f.writeframes(b''.join(frames))
             
-    save('bounce.wav', 600, 800, 0.1, 0.4, 'sine')
-    save('hit.wav', 800, 1000, 0.1, 0.5, 'sq')
-    save('break.wav', 1200, 600, 0.2, 0.6, 'noise')
-    save('powerup.wav', 400, 1200, 0.3, 0.5, 'sine')
-    save('die.wav', 300, 100, 0.5, 0.6, 'noise')
-    save('win.wav', 800, 1600, 0.6, 0.5, 'sq')
+    try:
+        save('bounce.wav', 600, 800, 0.1, 0.4, 'sine')
+        save('hit.wav', 800, 1000, 0.1, 0.5, 'sq')
+        save('break.wav', 1200, 600, 0.2, 0.6, 'noise')
+        save('powerup.wav', 400, 1200, 0.3, 0.5, 'sine')
+        save('die.wav', 300, 100, 0.5, 0.6, 'noise')
+        save('win.wav', 800, 1600, 0.6, 0.5, 'sq')
+    except Exception as e:
+        print(f"Failed to create SFX: {e}")
+
+def safe_load(path):
+    try:
+        from kivy.core.audio import SoundLoader
+        return SoundLoader.load(path)
+    except Exception:
+        return None
 
 class BrickBreakerGame(Widget):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         create_sfx()
         self.sounds = {
-            'bounce': SoundLoader.load(get_sfx_path('bounce.wav')),
-            'hit': SoundLoader.load(get_sfx_path('hit.wav')),
-            'break': SoundLoader.load(get_sfx_path('break.wav')),
-            'powerup': SoundLoader.load(get_sfx_path('powerup.wav')),
-            'die': SoundLoader.load(get_sfx_path('die.wav')),
-            'win': SoundLoader.load(get_sfx_path('win.wav'))
+            'bounce': safe_load(get_sfx_path('bounce.wav')),
+            'hit': safe_load(get_sfx_path('hit.wav')),
+            'break': safe_load(get_sfx_path('break.wav')),
+            'powerup': safe_load(get_sfx_path('powerup.wav')),
+            'die': safe_load(get_sfx_path('die.wav')),
+            'win': safe_load(get_sfx_path('win.wav'))
         }
 
         self.game = Game()
@@ -290,7 +299,7 @@ class BrickBreakerGame(Widget):
                 self.button('primary', title, 207, action)
                 
                 if g.state == 'menu':
-                    self.button('update_btn', 'BUSCAR ACTUALIZACION', 145, lambda: webbrowser.open("https://github.com/Xaoxay/pygame/releases/latest"))
+                    self.button('update_btn', 'BUSCAR ACTUALIZACION', 145, lambda: __import__('webbrowser').open("https://github.com/Xaoxay/pygame/releases/latest"))
                     
                 self.text('legend', 'BONUS:  + multibola    <> paleta ancha', 24, 105 if g.state == 'menu' else 125, 352, 30, 12, MUTED, align='center')
         for key, label in self.labels.items():
