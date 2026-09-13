@@ -31,10 +31,18 @@ PALETTES = [
 
 
 
+def get_sfx_path(name):
+    from kivy.app import App
+    try:
+        data_dir = App.get_running_app().user_data_dir
+    except Exception:
+        data_dir = '.'
+    return os.path.join(data_dir, name)
+
 def create_sfx():
-    if os.path.exists('bounce.wav'): return
+    if os.path.exists(get_sfx_path('bounce.wav')): return
     def save(name, freq_start, freq_end, duration, vol=0.5, wave_type='sq'):
-        with wave.open(name, 'w') as f:
+        with wave.open(get_sfx_path(name), 'w') as f:
             f.setnchannels(1)
             f.setsampwidth(2)
             f.setframerate(44100)
@@ -57,21 +65,21 @@ def create_sfx():
     save('bounce.wav', 600, 800, 0.1, 0.4, 'sine')
     save('hit.wav', 800, 1000, 0.1, 0.5, 'sq')
     save('break.wav', 1200, 600, 0.2, 0.6, 'noise')
-    save('powerup.wav', 400, 1200, 0.4, 0.5, 'sq')
-    save('die.wav', 200, 50, 0.6, 0.8, 'sq')
-    save('win.wav', 400, 800, 0.8, 0.6, 'sine')
+    save('powerup.wav', 400, 1200, 0.3, 0.5, 'sine')
+    save('die.wav', 300, 100, 0.5, 0.6, 'noise')
+    save('win.wav', 800, 1600, 0.6, 0.5, 'sq')
 
 class BrickBreakerGame(Widget):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         create_sfx()
         self.sounds = {
-            'bounce': SoundLoader.load('bounce.wav'),
-            'hit': SoundLoader.load('hit.wav'),
-            'break': SoundLoader.load('break.wav'),
-            'powerup': SoundLoader.load('powerup.wav'),
-            'die': SoundLoader.load('die.wav'),
-            'win': SoundLoader.load('win.wav')
+            'bounce': SoundLoader.load(get_sfx_path('bounce.wav')),
+            'hit': SoundLoader.load(get_sfx_path('hit.wav')),
+            'break': SoundLoader.load(get_sfx_path('break.wav')),
+            'powerup': SoundLoader.load(get_sfx_path('powerup.wav')),
+            'die': SoundLoader.load(get_sfx_path('die.wav')),
+            'win': SoundLoader.load(get_sfx_path('win.wav'))
         }
 
         self.game = Game()
