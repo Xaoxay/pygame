@@ -7,7 +7,7 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
 version = 0.1
 
-requirements = python3, pygame, sdl2_ttf, sdl2_image, sdl2_mixer
+requirements = python3, kivy
 
 orientation = portrait
 
