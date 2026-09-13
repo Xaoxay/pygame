@@ -31,6 +31,13 @@ jobs:
       - name: Build with Buildozer
         run: buildozer android debug
 
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildozer-debug-logs
+          path: .buildozer/**/*.log
+          
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
