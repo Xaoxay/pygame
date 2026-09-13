@@ -29,7 +29,8 @@ jobs:
           pip install buildozer cython virtualenv
 
       - name: Build with Buildozer
-        run: yes | buildozer -v android debug
+        run: |
+          yes | buildozer -v android debug > build.log 2>&1 || { tail -n 150 build.log; exit 1; }
 
       - name: Upload logs on failure
         if: failure()
