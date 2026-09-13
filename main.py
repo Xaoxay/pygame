@@ -13,6 +13,7 @@ from kivy.uix.widget import Widget
 from kivy.uix.label import Label
 from kivy.storage.jsonstore import JsonStore
 from os.path import join
+import webbrowser
 import math
 
 from game import Game, LEVELS
@@ -279,7 +280,11 @@ class BrickBreakerGame(Widget):
                            'over': ('VOLVER A JUGAR', g.new_game), 'won': ('JUGAR DE NUEVO', g.new_game)}
                 title, action = actions[g.state]
                 self.button('primary', title, 207, action)
-                self.text('legend', 'BONUS:  + multibola    <> paleta ancha', 24, 125, 352, 30, 12, MUTED, align='center')
+                
+                if g.state == 'menu':
+                    self.button('update_btn', 'BUSCAR ACTUALIZACION', 145, lambda: webbrowser.open("https://github.com/Xaoxay/pygame/releases/latest"))
+                    
+                self.text('legend', 'BONUS:  + multibola    <> paleta ancha', 24, 105 if g.state == 'menu' else 125, 352, 30, 12, MUTED, align='center')
         for key, label in self.labels.items():
             if key not in self.used_labels:
                 label.opacity = 0
