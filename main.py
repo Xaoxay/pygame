@@ -1,5 +1,11 @@
 """Neon Brick Breaker: portrait touch interface."""
 from kivy.app import App
+from kivy.core.audio import SoundLoader
+import math
+import random
+import wave
+import struct
+import os
 from kivy.clock import Clock
 from kivy.core.window import Window
 from kivy.graphics import Color, Rectangle, RoundedRectangle, Ellipse
@@ -21,9 +27,51 @@ PALETTES = [
 ]
 
 
+
+
+def create_sfx():
+    if os.path.exists('bounce.wav'): return
+    def save(name, freq_start, freq_end, duration, vol=0.5, wave_type='sq'):
+        with wave.open(name, 'w') as f:
+            f.setnchannels(1)
+            f.setsampwidth(2)
+            f.setframerate(44100)
+            frames = []
+            for i in range(int(44100 * duration)):
+                t = i / 44100.0
+                f_cur = freq_start + (freq_end - freq_start) * (t / duration)
+                phase = int(t * f_cur * 2)
+                if wave_type == 'sq':
+                    val = 1.0 if phase % 2 == 0 else -1.0
+                elif wave_type == 'noise':
+                    val = random.uniform(-1, 1)
+                else: # sine
+                    val = math.sin(t * f_cur * math.pi * 2)
+                env = 1.0 - (t / duration)
+                sample = int(val * vol * env * 32767.0)
+                frames.append(struct.pack('<h', sample))
+            f.writeframes(b''.join(frames))
+            
+    save('bounce.wav', 600, 800, 0.1, 0.4, 'sine')
+    save('hit.wav', 800, 1000, 0.1, 0.5, 'sq')
+    save('break.wav', 1200, 600, 0.2, 0.6, 'noise')
+    save('powerup.wav', 400, 1200, 0.4, 0.5, 'sq')
+    save('die.wav', 200, 50, 0.6, 0.8, 'sq')
+    save('win.wav', 400, 800, 0.8, 0.6, 'sine')
+
 class BrickBreakerGame(Widget):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        create_sfx()
+        self.sounds = {
+            'bounce': SoundLoader.load('bounce.wav'),
+            'hit': SoundLoader.load('hit.wav'),
+            'break': SoundLoader.load('break.wav'),
+            'powerup': SoundLoader.load('powerup.wav'),
+            'die': SoundLoader.load('die.wav'),
+            'win': SoundLoader.load('win.wav')
+        }
+
         self.game = Game()
         self.labels, self.buttons = {}, []
         self.record, self.store = 0, None
@@ -42,10 +90,19 @@ class BrickBreakerGame(Widget):
     def accent(self):
         return PALETTES[(self.game.level // 3) % 3][0]
 
+
     def transform(self):
         self.scale = max(.01, min(self.width / 400, self.height / 800))
-        self.ox = self.x + (self.width - 400 * self.scale) / 2
-        self.oy = self.y + (self.height - 800 * self.scale) / 2
+        # Shake effect
+        sx = 0
+        sy = 0
+        if hasattr(self.game, 'shake') and self.game.shake > 0:
+            sx = (random.random() - 0.5) * self.game.shake * self.scale
+            sy = (random.random() - 0.5) * self.game.shake * self.scale
+        
+        self.ox = self.x + (self.width - 400 * self.scale) / 2 + sx
+        self.oy = self.y + (self.height - 800 * self.scale) / 2 + sy
+
 
     def box(self, x, y, w, h, color, radius=0, alpha=1):
         Color(*color, alpha)
@@ -80,6 +137,14 @@ class BrickBreakerGame(Widget):
 
     def update(self, dt):
         self.game.tick(dt)
+        # Process events for sounds
+        if hasattr(self.game, 'events'):
+            for ev in self.game.events:
+                if ev in self.sounds and self.sounds[ev]:
+                    self.sounds[ev].volume = 0.5
+                    self.sounds[ev].play()
+            self.game.events.clear()
+
         if self.game.state == 'playing':
             for ball in self.game.balls:
                 ball['trail'].append((ball['x'], ball['y']))
@@ -130,8 +195,13 @@ class BrickBreakerGame(Widget):
             self.box(24, 659, 352, 3, PANEL, 1)
             if progress:
                 self.box(24, 659, 352 * progress, 3, self.accent, 1)
+
             for b in g.bricks:
                 color = colors[b['row'] % len(colors)]
+                # Glow effect
+                self.box(b['x'] - 6, b['y'] - 6, b['w'] + 12, b['h'] + 12, color, 8, .15)
+                self.box(b['x'] - 3, b['y'] - 3, b['w'] + 6, b['h'] + 6, color, 6, .3)
+                
                 self.box(b['x'], b['y'] - 3, b['w'], b['h'] + 6, color, 6, .10)
                 self.box(b['x'], b['y'], b['w'], b['h'], color, 5, .75 if b['hp'] == 1 else .95)
                 self.box(b['x'] + 5, b['y'] + b['h'] - 4, b['w'] - 10, 1, WHITE, alpha=.45)

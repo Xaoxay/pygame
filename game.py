@@ -27,15 +27,19 @@ class Game:
 
     def new_game(self):
         self.level, self.score, self.lives, self.combo = 0, 0, 3, 0
+        self.events = []
+        self.shake = 0
         self.load_level()
 
     @property
     def speed(self):
-        return 260 + self.level * 19
+        # Más difícil: aumenta velocidad base y el escalado por nivel
+        return 320 + self.level * 35
 
     @property
     def paddle_width(self):
-        return 128 if self.wide_time > 0 else max(76, 108 - self.level * 3)
+        # Paleta más chica para subir la dificultad
+        return 128 if self.wide_time > 0 else max(60, 100 - self.level * 4)
 
     @property
     def paddle(self):
@@ -83,14 +87,19 @@ class Game:
                 and ball['y'] + 6 > y and ball['y'] - 6 < y + h)
 
     def burst(self, x, y, row):
-        for _ in range(8):
-            angle, speed = self.rng.random() * math.tau, self.rng.uniform(30, 110)
+        # Más partículas para más espectacularidad
+        for _ in range(15):
+            angle, speed = self.rng.random() * math.tau, self.rng.uniform(50, 160)
             self.particles.append(dict(x=x, y=y, vx=math.cos(angle) * speed,
-                                       vy=math.sin(angle) * speed, life=.4, row=row))
+                                       vy=math.sin(angle) * speed, life=self.rng.uniform(0.3, 0.7), row=row))
 
     def tick(self, dt):
         if self.state != 'playing':
+            self.shake = max(0, self.shake - dt * 60)
             return
+        
+        self.shake = max(0, self.shake - dt * 50)
+        
         # Substeps prevent fast balls tunnelling through bricks on slower phones.
         dt = min(max(dt, 0), .1)
         steps = max(1, math.ceil(dt / (1 / 240)))
@@ -108,23 +117,40 @@ class Game:
             p['y'] += p['vy'] * dt
             if p['life'] <= 0:
                 self.particles.remove(p)
+                
         for ball in self.balls[:]:
+            # Guardar rastro para el neón
+            ball['trail'].append((ball['x'], ball['y']))
+            if len(ball['trail']) > 8:
+                ball['trail'].pop(0)
+                
             old_x, old_y = ball['x'], ball['y']
             ball['x'] += ball['vx'] * dt
             ball['y'] += ball['vy'] * dt
+            
             if ball['x'] < 20 or ball['x'] > 380:
                 ball['x'] = min(380, max(20, ball['x']))
                 ball['vx'] = abs(ball['vx']) * (1 if ball['x'] == 20 else -1)
+                self.events.append('bounce')
+                self.shake = min(self.shake + 2, 10)
+                
             if ball['y'] > self.ceiling - 6:
                 ball['y'], ball['vy'] = self.ceiling - 6, -abs(ball['vy'])
+                self.events.append('bounce')
+                self.shake = min(self.shake + 2, 10)
+                
             if ball['y'] < self.floor:
                 self.balls.remove(ball)
                 continue
+                
             if ball['vy'] < 0 and self.overlaps(ball, self.paddle):
                 offset = (ball['x'] - self.paddle_x) / (self.paddle_width / 2)
                 angle = min(.95, max(-.95, offset)) * math.radians(60)
                 ball['vx'], ball['vy'] = self.speed * math.sin(angle), self.speed * math.cos(angle)
                 ball['y'], self.combo = 131, 0
+                self.events.append('bounce')
+                self.shake = min(self.shake + 4, 15)
+                
             for brick in self.bricks[:]:
                 if not self.overlaps(ball, (brick['x'], brick['y'], brick['w'], brick['h'])):
                     continue
@@ -137,29 +163,43 @@ class Game:
                 brick['hp'] -= 1
                 self.score += 25
                 self.burst(ball['x'], ball['y'], brick['row'])
+                
                 if brick['hp'] == 0:
                     self.bricks.remove(brick)
                     self.combo += 1
                     self.score += 75 * min(self.combo, 5)
+                    self.events.append('break')
+                    self.shake = min(self.shake + 8, 20)
                     if self.rng.random() < .18:
                         self.drops.append(dict(x=brick['x'] + 23, y=brick['y'],
                                                kind=self.rng.choice(('wide', 'multi'))))
+                else:
+                    self.events.append('hit')
+                    self.shake = min(self.shake + 4, 15)
                 break
+                
         # Completing the level wins over losing a ball on the same step.
         if not self.bricks:
             self.score += (self.level + 1) * 500
             self.state = 'won' if self.level == len(LEVELS) - 1 else 'clear'
             self.drops.clear()
+            self.events.append('win')
             return
+            
         if not self.balls:
             self.lives -= 1
             self.combo, self.wide_time = 0, 0
             self.drops.clear()
             self.state = 'ready' if self.lives else 'over'
+            self.events.append('die')
+            self.shake = 15
             return
+            
         for drop in self.drops[:]:
             drop['y'] -= 110 * dt
             if self.overlaps(drop, self.paddle):
+                self.events.append('powerup')
+                self.shake = min(self.shake + 5, 15)
                 if drop['kind'] == 'wide':
                     self.wide_time = 12
                 else:
