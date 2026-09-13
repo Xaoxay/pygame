@@ -8,7 +8,7 @@ import struct
 import os
 from kivy.clock import Clock
 from kivy.core.window import Window
-from kivy.graphics import Color, Rectangle, RoundedRectangle, Ellipse
+from kivy.graphics import Color, Rectangle, RoundedRectangle, Ellipse, Line
 from kivy.uix.widget import Widget
 from kivy.uix.label import Label
 from kivy.storage.jsonstore import JsonStore
