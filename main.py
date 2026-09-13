@@ -183,6 +183,16 @@ class BrickBreakerGame(Widget):
             Color(*BG, 1)
             Rectangle(pos=self.pos, size=self.size)
             self.box(14, 72, 372, 574, PANEL, 20, .4)
+            # Animated Scrolling Grid
+            grid_offset = (self.light_time * 40) % 32
+            Color(0.12, 0.12, 0.25, 0.3)
+            for x in range(24, 400, 32):
+                Line(points=[self.ox + x * self.scale, self.oy + 82 * self.scale, self.ox + x * self.scale, self.oy + 650 * self.scale], width=1)
+            for y in range(82, 650 + 32, 32):
+                yy = y - grid_offset
+                if 82 <= yy <= 650:
+                    Line(points=[self.ox + 24 * self.scale, self.oy + yy * self.scale, self.ox + 376 * self.scale, self.oy + yy * self.scale], width=1)
+            
             for x in range(24, 400, 32):
                 for y in range(82, 650, 32):
                     self.dot(x, y, .7, MUTED, .18)
@@ -219,12 +229,16 @@ class BrickBreakerGame(Widget):
                 self.text('drop' + str(i), '+' if drop['kind'] == 'multi' else '<>',
                           drop['x'] - 14, drop['y'] - 14, 28, 28, 17, BG, True, 'center')
             px, py, pw, ph = g.paddle
-            self.box(px - 5, py - 4, pw + 10, ph + 8, self.accent, 10, .12)
+            paddle_pulse = .85 + .15 * math.sin(self.light_time * 4)
+            self.box(px - 8, py - 6, pw + 16, ph + 12, self.accent, 12, .1 * paddle_pulse)
+            self.box(px - 5, py - 4, pw + 10, ph + 8, self.accent, 10, .2 * paddle_pulse)
+            
             self.box(px, py, pw, ph, self.accent, 6)
             self.box(px + 12, py + ph - 4, pw - 24, 2, WHITE, 1, .7)
             for ball in g.balls:
                 for i, (x, y) in enumerate(ball['trail']):
-                    self.dot(x, y, 2 + i * .3, self.accent, .04 + i * .035)
+                    trail_color = colors[i % len(colors)]
+                    self.dot(x, y, 2 + i * .3, trail_color, .1 + i * .05)
                 flash = min(1, ball.get('flash', 0) / .22)
                 self.dot(ball['x'], ball['y'], 24 + 12 * flash, self.accent, .05 + .12 * flash)
                 self.dot(ball['x'], ball['y'], 15 + 6 * flash, self.accent, .18 + .28 * flash)

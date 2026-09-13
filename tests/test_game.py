@@ -20,7 +20,7 @@ class GameTests(unittest.TestCase):
                 self.assertLessEqual(b['x'] + b['w'], 386)
                 self.assertGreater(b['y'], 200)
                 self.assertLess(b['y'] + b['h'], self.g.ceiling)
-        self.assertEqual(len(patterns), 10)
+        self.assertEqual(len(patterns), 20)
 
     def test_losing_last_ball_costs_exactly_one_life(self):
         self.g.launch()
@@ -47,19 +47,19 @@ class GameTests(unittest.TestCase):
         self.g.tick(.02)
         self.assertNotEqual(before, self.g.balls)
 
-    def test_campaign_ends_after_ten_levels_and_preserves_score(self):
-        for level in range(10):
+    def test_campaign_ends_after_twenty_levels_and_preserves_score(self):
+        for level in range(20):
             self.assertEqual(self.g.level, level)
             self.g.launch()
             self.g.bricks.clear()
             self.g.tick(.02)
-            expected = 'won' if level == 9 else 'clear'
+            expected = 'won' if level == 19 else 'clear'
             self.assertEqual(self.g.state, expected)
             score = self.g.score
             self.g.tick(.1)
             self.assertEqual(self.g.score, score)
             self.g.advance()
-        self.assertEqual(self.g.score, 27500)
+        self.assertEqual(self.g.score, 105000)
         self.g.new_game()
         self.assertEqual((self.g.level, self.g.score, self.g.lives), (0, 0, 3))
 
