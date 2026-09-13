@@ -5,7 +5,8 @@ package.domain = org.braia
 
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
-version = 0.1
+version = 0.2
+source.exclude_dirs = tests,__pycache__
 
 requirements = python3, kivy
 
