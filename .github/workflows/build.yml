@@ -26,10 +26,10 @@ jobs:
       - name: Install Buildozer
         run: |
           pip install --upgrade pip
-          pip install buildozer "cython<3.0.0" virtualenv
+          pip install buildozer cython virtualenv
 
       - name: Build with Buildozer
-        run: buildozer android debug
+        run: yes | buildozer -v android debug
 
       - name: Upload logs on failure
         if: failure()
