@@ -1,11 +1,14 @@
 # Neon Brick Breaker
 
-Juego táctil en Kivy para Android. Versión 0.2 con diez niveles diseñados a mano,
+Juego táctil en Kivy para Android. Versión 0.3 con diez niveles diseñados a mano,
 tres vidas, dificultad progresiva, ladrillos de hasta tres golpes y récord local.
+Incluye luces neón en los ladrillos y destellos de la pelota al golpear.
 
 ## Controles
 
 - Tocá **Jugar** y luego el campo para lanzar la bola.
+- Elegí **x1, x2 o x3** en el menú, la pausa o durante la partida. Acelera la bola,
+  las bonificaciones y el tiempo del juego; el control táctil sigue siendo directo.
 - Deslizá el dedo para mover la paleta. El punto del rebote cambia la dirección.
 - Atrapá `+` para multibola (hasta cinco bolas) y `<>` para ampliar la paleta durante 12 segundos.
 - Los puntos dentro de cada ladrillo indican los golpes restantes.

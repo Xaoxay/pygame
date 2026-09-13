@@ -22,6 +22,7 @@ class Game:
 
     def __init__(self, seed=None):
         self.rng = random.Random(seed)
+        self.rate = 1
         self.new_game()
         self.state = 'menu'
 
@@ -30,6 +31,11 @@ class Game:
         self.events = []
         self.shake = 0
         self.load_level()
+
+    def set_rate(self, rate):
+        if rate not in (1, 2, 3):
+            raise ValueError('Speed must be x1, x2 or x3')
+        self.rate = rate
 
     @property
     def speed(self):
@@ -102,6 +108,9 @@ class Game:
         
         # Substeps prevent fast balls tunnelling through bricks on slower phones.
         dt = min(max(dt, 0), .1)
+        for ball in self.balls:
+            ball['flash'] = max(0, ball.get('flash', 0) - dt)
+        dt *= self.rate
         steps = max(1, math.ceil(dt / (1 / 240)))
         for _ in range(steps):
             if self.state != 'playing':
@@ -129,12 +138,14 @@ class Game:
             ball['y'] += ball['vy'] * dt
             
             if ball['x'] < 20 or ball['x'] > 380:
+                ball['flash'] = .22
                 ball['x'] = min(380, max(20, ball['x']))
                 ball['vx'] = abs(ball['vx']) * (1 if ball['x'] == 20 else -1)
                 self.events.append('bounce')
                 self.shake = min(self.shake + 2, 10)
                 
             if ball['y'] > self.ceiling - 6:
+                ball['flash'] = .22
                 ball['y'], ball['vy'] = self.ceiling - 6, -abs(ball['vy'])
                 self.events.append('bounce')
                 self.shake = min(self.shake + 2, 10)
@@ -144,6 +155,7 @@ class Game:
                 continue
                 
             if ball['vy'] < 0 and self.overlaps(ball, self.paddle):
+                ball['flash'] = .22
                 offset = (ball['x'] - self.paddle_x) / (self.paddle_width / 2)
                 angle = min(.95, max(-.95, offset)) * math.radians(60)
                 ball['vx'], ball['vy'] = self.speed * math.sin(angle), self.speed * math.cos(angle)
@@ -161,6 +173,7 @@ class Game:
                     ball['vx'] *= -1
                     ball['x'] = brick['x'] - 6 if old_x < brick['x'] else brick['x'] + brick['w'] + 6
                 brick['hp'] -= 1
+                ball['flash'] = .22
                 self.score += 25
                 self.burst(ball['x'], ball['y'], brick['row'])
                 

@@ -13,6 +13,7 @@ from kivy.uix.widget import Widget
 from kivy.uix.label import Label
 from kivy.storage.jsonstore import JsonStore
 from os.path import join
+import math
 
 from game import Game, LEVELS
 
@@ -82,6 +83,7 @@ class BrickBreakerGame(Widget):
         except (OSError, ValueError, KeyError):
             pass
         self.active_touch = None
+        self.light_time = 0
         self.bind(size=self.redraw, pos=self.redraw)
         Window.bind(on_keyboard=self.keyboard)
         self.event = Clock.schedule_interval(self.update, 1 / 60)
@@ -136,6 +138,8 @@ class BrickBreakerGame(Widget):
         self.buttons.append(((48, y, 304, 52), action))
 
     def update(self, dt):
+        if self.game.state != 'paused':
+            self.light_time += min(dt, .1)
         self.game.tick(dt)
         # Process events for sounds
         if hasattr(self.game, 'events'):
@@ -166,7 +170,7 @@ class BrickBreakerGame(Widget):
         # must never remove label canvases during the next animation frame.
         keys = ['brand', 'level', 'pause', 'score', 'lives', 'ready', 'help',
                 'footer', 'counter', 'combo', 'eyebrow', 'title', 'subtitle',
-                'result', 'primary', 'legend']
+                'result', 'primary', 'legend', 'speed1', 'speed2', 'speed3']
         keys.extend('drop' + str(i) for i in range(len(g.drops)))
         for key in keys:
             if key not in self.labels:
@@ -198,12 +202,12 @@ class BrickBreakerGame(Widget):
 
             for b in g.bricks:
                 color = colors[b['row'] % len(colors)]
-                # Glow effect
-                self.box(b['x'] - 6, b['y'] - 6, b['w'] + 12, b['h'] + 12, color, 8, .15)
-                self.box(b['x'] - 3, b['y'] - 3, b['w'] + 6, b['h'] + 6, color, 6, .3)
-                
-                self.box(b['x'], b['y'] - 3, b['w'], b['h'] + 6, color, 6, .10)
+                pulse = .85 + .15 * math.sin(self.light_time * 2 + b['row'] * .8)
+                for spread, alpha in ((9, .05), (6, .09), (3, .18)):
+                    self.box(b['x'] - spread, b['y'] - spread, b['w'] + spread * 2,
+                             b['h'] + spread * 2, color, 8, alpha * pulse)
                 self.box(b['x'], b['y'], b['w'], b['h'], color, 5, .75 if b['hp'] == 1 else .95)
+                self.box(b['x'] + 3, b['y'] + b['h'] - 3, b['w'] - 6, 2, WHITE, 1, .8)
                 self.box(b['x'] + 5, b['y'] + b['h'] - 4, b['w'] - 10, 1, WHITE, alpha=.45)
                 for hit in range(b['hp']):
                     self.dot(b['x'] + b['w'] / 2 + (hit - (b['hp'] - 1) / 2) * 6,
@@ -221,15 +225,18 @@ class BrickBreakerGame(Widget):
             for ball in g.balls:
                 for i, (x, y) in enumerate(ball['trail']):
                     self.dot(x, y, 2 + i * .3, self.accent, .04 + i * .035)
-                self.dot(ball['x'], ball['y'], 11, self.accent, .16)
+                flash = min(1, ball.get('flash', 0) / .22)
+                self.dot(ball['x'], ball['y'], 24 + 12 * flash, self.accent, .05 + .12 * flash)
+                self.dot(ball['x'], ball['y'], 15 + 6 * flash, self.accent, .18 + .28 * flash)
+                self.dot(ball['x'], ball['y'], 9 + 3 * flash, WHITE, .18 + .40 * flash)
                 self.dot(ball['x'], ball['y'], 6, WHITE)
             if g.state == 'ready':
                 self.dot(g.paddle_x, 135, 6, WHITE)
                 self.text('ready', 'TOCA PARA LANZAR', 35, 265, 330, 36, 19, WHITE, True, 'center')
                 self.text('help', 'Deslizá el dedo para mover la paleta', 35, 234, 330, 30, 13, MUTED, align='center')
-            footer = f'PALETA ANCHA  {g.wide_time:.0f}s' if g.wide_time else 'DESLIZÁ PARA MOVER'
-            self.text('footer', footer, 24, 25, 255, 30, 11, MUTED)
-            self.text('counter', f'{g.level + 1:02d} / 10', 298, 25, 78, 30, 13, self.accent, True, 'right')
+            footer = f'PALETA ANCHA  {g.wide_time:.0f}s' if g.wide_time else 'VELOCIDAD'
+            self.text('footer', footer, 24, 20, 170, 40, 11, MUTED)
+            self.speed_selector(200, 18, 56, 4)
             if g.combo > 1 and g.state == 'playing':
                 self.text('combo', f'COMBO x{min(g.combo, 5)}', 70, 336, 260, 34, 18, self.accent, True, 'center')
             if g.state in ('menu', 'paused', 'clear', 'over', 'won'):
@@ -251,16 +258,26 @@ class BrickBreakerGame(Widget):
                              'won': 'Superaste los 10 niveles.\nVolvé a jugar para mejorar tu marca.'}
                 self.text('subtitle', subtitles[g.state], 48, 349, 304, 68, 14, MUTED)
                 self.text('result', f'RÉCORD  {self.record:06d}' if g.state == 'menu' else f'PUNTOS  {g.score:06d}',
-                          48, 303, 304, 30, 16, self.accent, True)
+                          48, 319, 304, 30, 16, self.accent, True)
+                self.speed_selector(48, 274, 96, 8)
                 actions = {'menu': ('JUGAR', g.new_game), 'paused': ('CONTINUAR', g.resume),
                            'clear': ('SIGUIENTE NIVEL', g.advance),
                            'over': ('VOLVER A JUGAR', g.new_game), 'won': ('JUGAR DE NUEVO', g.new_game)}
                 title, action = actions[g.state]
-                self.button('primary', title, 231, action)
+                self.button('primary', title, 207, action)
                 self.text('legend', 'BONUS:  + multibola    <> paleta ancha', 24, 125, 352, 30, 12, MUTED, align='center')
         for key, label in self.labels.items():
             if key not in self.used_labels:
                 label.opacity = 0
+
+    def speed_selector(self, x, y, width, gap):
+        for rate in (1, 2, 3):
+            bx = x + (rate - 1) * (width + gap)
+            selected = self.game.rate == rate
+            self.box(bx, y, width, 44, self.accent if selected else (.10, .14, .22), 12)
+            self.text('speed' + str(rate), f'x{rate}', bx, y, width, 44, 16,
+                      BG if selected else WHITE, True, 'center')
+            self.buttons.append(((bx, y, width, 44), lambda value=rate: self.game.set_rate(value)))
 
     def on_touch_down(self, touch):
         self.transform()

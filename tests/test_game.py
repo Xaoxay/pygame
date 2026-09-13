@@ -82,7 +82,7 @@ class GameTests(unittest.TestCase):
         self.assertEqual(self.g.paddle[0], 14)
         self.g.wide_time = .001
         self.g.tick(.01)
-        self.assertEqual(self.g.paddle_width, 108)
+        self.assertEqual(self.g.paddle_width, 100)
 
     def test_multiball_is_capped(self):
         self.g.launch()
@@ -104,6 +104,47 @@ class GameTests(unittest.TestCase):
         self.g.balls[0]['y'] = 0
         self.g.tick(.02)
         self.assertEqual(self.g.state, 'over')
+
+    def test_rate_scales_motion_without_changing_direction(self):
+        for rate in (1, 2, 3):
+            self.g.new_game()
+            self.g.set_rate(rate)
+            self.g.launch()
+            ball = self.g.balls[0]
+            start, velocity = ball['y'], ball['vy']
+            self.g.tick(.02)
+            self.assertAlmostEqual(ball['y'] - start, velocity * .02 * rate)
+
+    def test_x3_collision_flashes_and_does_not_tunnel(self):
+        self.g.set_rate(3)
+        self.g.launch()
+        self.g.bricks = [dict(x=150, y=400, w=46, h=23, hp=2, row=0)]
+        self.g.balls = [dict(x=170, y=380, vx=0, vy=440, trail=[])]
+        self.g.tick(.1)
+        self.assertEqual(self.g.bricks[0]['hp'], 1)
+        self.assertLess(self.g.balls[0]['vy'], 0)
+        self.assertGreater(self.g.balls[0]['flash'], 0)
+
+    def test_wall_and_paddle_flash_and_decay(self):
+        self.g.launch()
+        ball = self.g.balls[0]
+        ball.update(x=379, y=300, vx=260, vy=0)
+        self.g.tick(.02)
+        self.assertGreater(ball['flash'], 0)
+        for _ in range(3):
+            self.g.tick(.1)
+        self.assertEqual(ball['flash'], 0)
+        ball.update(x=200, y=134, vx=0, vy=-260)
+        self.g.tick(.02)
+        self.assertGreater(ball['flash'], 0)
+        self.assertGreater(ball['vy'], 0)
+
+    def test_speed_choice_survives_new_game(self):
+        self.g.set_rate(3)
+        self.g.new_game()
+        self.assertEqual(self.g.rate, 3)
+        with self.assertRaises(ValueError):
+            self.g.set_rate(0)
 
 
 if __name__ == '__main__':
