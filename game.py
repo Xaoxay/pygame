@@ -49,12 +49,12 @@ class Game:
 
     @property
     def speed(self):
-        # Más difícil: aumenta velocidad base y el escalado por nivel
+        # Ms difcil: aumenta velocidad base y el escalado por nivel
         return 320 + self.level * 35
 
     @property
     def paddle_width(self):
-        # Paleta más chica para subir la dificultad
+        # Paleta ms chica para subir la dificultad
         return 128 if self.wide_time > 0 else max(60, 100 - self.level * 4)
 
     @property
@@ -103,7 +103,7 @@ class Game:
                 and ball['y'] + 6 > y and ball['y'] - 6 < y + h)
 
     def burst(self, x, y, row):
-        # Más partículas para más espectacularidad
+        # Ms partculas para ms espectacularidad
         for _ in range(15):
             angle, speed = self.rng.random() * math.tau, self.rng.uniform(50, 160)
             self.particles.append(dict(x=x, y=y, vx=math.cos(angle) * speed,
@@ -138,7 +138,7 @@ class Game:
                 self.particles.remove(p)
                 
         for ball in self.balls[:]:
-            # Guardar rastro para el neón
+            # Guardar rastro para el nen
             ball['trail'].append((ball['x'], ball['y']))
             if len(ball['trail']) > 8:
                 ball['trail'].pop(0)

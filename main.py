@@ -37,31 +37,31 @@ def get_sfx_path(name):
     return os.path.join(data_dir, name)
 
 def create_sfx():
-    import wave
-    import struct
-    if os.path.exists(get_sfx_path('bounce.wav')): return
-    def save(name, freq_start, freq_end, duration, vol=0.5, wave_type='sq'):
-        with wave.open(get_sfx_path(name), 'w') as f:
-            f.setnchannels(1)
-            f.setsampwidth(2)
-            f.setframerate(44100)
-            frames = []
-            for i in range(int(44100 * duration)):
-                t = i / 44100.0
-                f_cur = freq_start + (freq_end - freq_start) * (t / duration)
-                phase = int(t * f_cur * 2)
-                if wave_type == 'sq':
-                    val = 1.0 if phase % 2 == 0 else -1.0
-                elif wave_type == 'noise':
-                    val = random.uniform(-1, 1)
-                else: # sine
-                    val = math.sin(t * f_cur * math.pi * 2)
-                env = 1.0 - (t / duration)
-                sample = int(val * vol * env * 32767.0)
-                frames.append(struct.pack('<h', sample))
-            f.writeframes(b''.join(frames))
-            
     try:
+        import wave
+        import struct
+        if os.path.exists(get_sfx_path('bounce.wav')): return
+        def save(name, freq_start, freq_end, duration, vol=0.5, wave_type='sq'):
+            with wave.open(get_sfx_path(name), 'w') as f:
+                f.setnchannels(1)
+                f.setsampwidth(2)
+                f.setframerate(44100)
+                frames = []
+                for i in range(int(44100 * duration)):
+                    t = i / 44100.0
+                    f_cur = freq_start + (freq_end - freq_start) * (t / duration)
+                    phase = int(t * f_cur * 2)
+                    if wave_type == 'sq':
+                        val = 1.0 if phase % 2 == 0 else -1.0
+                    elif wave_type == 'noise':
+                        val = random.uniform(-1, 1)
+                    else: # sine
+                        val = math.sin(t * f_cur * math.pi * 2)
+                    env = 1.0 - (t / duration)
+                    sample = int(val * vol * env * 32767.0)
+                    frames.append(struct.pack('<h', sample))
+                f.writeframes(b''.join(frames))
+                
         save('bounce.wav', 600, 800, 0.1, 0.4, 'sine')
         save('hit.wav', 800, 1000, 0.1, 0.5, 'sq')
         save('break.wav', 1200, 600, 0.2, 0.6, 'noise')
@@ -72,23 +72,18 @@ def create_sfx():
         print(f"Failed to create SFX: {e}")
 
 def safe_load(path):
-    try:
-        from kivy.core.audio import SoundLoader
-        return SoundLoader.load(path)
-    except Exception:
-        return None
+    return None
 
 class BrickBreakerGame(Widget):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        create_sfx()
         self.sounds = {
-            'bounce': safe_load(get_sfx_path('bounce.wav')),
-            'hit': safe_load(get_sfx_path('hit.wav')),
-            'break': safe_load(get_sfx_path('break.wav')),
-            'powerup': safe_load(get_sfx_path('powerup.wav')),
-            'die': safe_load(get_sfx_path('die.wav')),
-            'win': safe_load(get_sfx_path('win.wav'))
+            'bounce': None,
+            'hit': None,
+            'break': None,
+            'powerup': None,
+            'die': None,
+            'win': None
         }
 
         self.game = Game()
@@ -98,7 +93,7 @@ class BrickBreakerGame(Widget):
             self.store = JsonStore(join(App.get_running_app().user_data_dir, 'record.json'))
             if self.store.exists('best'):
                 self.record = self.store.get('best')['score']
-        except (OSError, ValueError, KeyError):
+        except Exception:
             pass
         self.active_touch = None
         self.light_time = 0
@@ -139,16 +134,20 @@ class BrickBreakerGame(Widget):
                      self.oy + (y - radius) * self.scale),
                 size=(radius * 2 * self.scale, radius * 2 * self.scale))
 
-    def text(self, key, value, x, y, w, h, size=14, color=WHITE, bold=False, align='left'):
-        self.used_labels.add(key)
+    def text(self, key, text, x, y, w, h, size, color, bold=False, align='left'):
+        if key not in self.labels:
+            self.labels[key] = Label(markup=True)
+            self.add_widget(self.labels[key])
         label = self.labels[key]
-        label.text = value
-        label.pos = (self.ox + x * self.scale, self.oy + y * self.scale)
+        label.text = f'[b]{text}[/b]' if bold else text
+        label.color = (*color, 1) if len(color) == 3 else color
+        label.font_size = max(1, size * self.scale)
         label.size = (w * self.scale, h * self.scale)
+        label.pos = (self.ox + x * self.scale, self.oy + y * self.scale)
+        label.halign, label.valign = align, 'middle'
         label.text_size = label.size
-        label.font_size = size * self.scale
-        label.color, label.bold, label.halign = (*color, 1), bold, align
         label.opacity = 1
+        self.used_labels.add(key)
 
     def button(self, key, title, y, action):
         self.box(48, y, 304, 52, self.accent, 16)
@@ -265,7 +264,7 @@ class BrickBreakerGame(Widget):
             if g.state == 'ready':
                 self.dot(g.paddle_x, 135, 6, WHITE)
                 self.text('ready', 'TOCA PARA LANZAR', 35, 265, 330, 36, 19, WHITE, True, 'center')
-                self.text('help', 'Deslizá el dedo para mover la paleta', 35, 234, 330, 30, 13, MUTED, align='center')
+                self.text('help', 'Desliz el dedo para mover la paleta', 35, 234, 330, 30, 13, MUTED, align='center')
             footer = f'PALETA ANCHA  {g.wide_time:.0f}s' if g.wide_time else 'VELOCIDAD'
             self.text('footer', footer, 24, 20, 170, 40, 11, MUTED)
             self.speed_selector(200, 18, 56, 4)
@@ -283,13 +282,13 @@ class BrickBreakerGame(Widget):
                 titles = {'menu': 'BRICK\nBREAKER', 'paused': 'EN PAUSA', 'clear': 'NIVEL\nSUPERADO',
                           'over': 'OTRA\nOPORTUNIDAD', 'won': 'GALAXIA\nCOMPLETADA'}
                 self.text('title', titles[g.state], 48, 426, 304, 115, 34, WHITE, True)
-                subtitles = {'menu': '10 niveles. Tres vidas. Un nuevo récord.\nRompé ladrillos y atrapá bonificaciones.',
+                subtitles = {'menu': '10 niveles. Tres vidas. Un nuevo rcord.\nRomp ladrillos y atrap bonificaciones.',
                              'paused': 'Tomate un respiro.\nTu partida te espera.',
-                             'clear': f'{LEVELS[g.level][0]} completado\n+1 vida, hasta un máximo de 3',
-                             'over': f'Llegaste al nivel {g.level + 1} de 10.\nCada intento te lleva más lejos.',
-                             'won': 'Superaste los 10 niveles.\nVolvé a jugar para mejorar tu marca.'}
+                             'clear': f'{LEVELS[g.level][0]} completado\n+1 vida, hasta un mximo de 3',
+                             'over': f'Llegaste al nivel {g.level + 1} de 10.\nCada intento te lleva ms lejos.',
+                             'won': 'Superaste los 10 niveles.\nVolv a jugar para mejorar tu marca.'}
                 self.text('subtitle', subtitles[g.state], 48, 349, 304, 68, 14, MUTED)
-                self.text('result', f'RÉCORD  {self.record:06d}' if g.state == 'menu' else f'PUNTOS  {g.score:06d}',
+                self.text('result', f'RCORD  {self.record:06d}' if g.state == 'menu' else f'PUNTOS  {g.score:06d}',
                           48, 319, 304, 30, 16, self.accent, True)
                 self.speed_selector(48, 274, 96, 8)
                 actions = {'menu': ('JUGAR', g.new_game), 'paused': ('CONTINUAR', g.resume),

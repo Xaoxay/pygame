@@ -11,8 +11,8 @@ source.exclude_dirs = tests,__pycache__
 requirements = python3, kivy
 
 # Recreate the build venv cleanly and avoid a mixed pip installation.
-p4a.branch = develop
-p4a.commit = 0382d27de2f7315ed98e74884bafb30365decdee
+# p4a.branch = develop
+# p4a.commit = 0382d27de2f7315ed98e74884bafb30365decdee
 
 orientation = portrait
 
