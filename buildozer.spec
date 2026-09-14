@@ -8,11 +8,11 @@ source.include_exts = py,png,jpg,kv,atlas
 version = 0.3
 source.exclude_dirs = tests,__pycache__
 
-requirements = python3==3.11.9, kivy
+requirements = python3, kivy
 
 # Recreate the build venv cleanly and avoid a mixed pip installation.
-# p4a.branch = develop
-# p4a.commit = 0382d27de2f7315ed98e74884bafb30365decdee
+p4a.branch = develop
+p4a.commit = 0382d27de2f7315ed98e74884bafb30365decdee
 
 orientation = portrait
 
@@ -21,7 +21,6 @@ orientation = portrait
 #
 
 fullscreen = 1
-
 android.permissions = INTERNET
 android.api = 33
 android.minapi = 31
