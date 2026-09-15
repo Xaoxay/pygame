@@ -4,7 +4,7 @@ package.name = neonbrickbreaker
 package.domain = org.braia
 
 source.dir = .
-source.include_exts = py,png,jpg,kv,atlas
+source.include_exts = py,png,jpg,kv,atlas,ttf
 version = 0.3
 source.exclude_dirs = tests,__pycache__
 

@@ -1,19 +1,29 @@
 """Neon Brick Breaker: portrait touch interface."""
-from kivy.app import App
-from kivy.core.audio import SoundLoader
+import os
 import math
 import random
-import os
+from os.path import join
+
+from kivy.app import App
 from kivy.clock import Clock
 from kivy.core.window import Window
+from kivy.core.text import LabelBase
 from kivy.graphics import Color, Rectangle, RoundedRectangle, Ellipse, Line
 from kivy.uix.widget import Widget
 from kivy.uix.label import Label
 from kivy.storage.jsonstore import JsonStore
-from os.path import join
-import math
 
 from game import Game, LEVELS
+
+curr_dir = os.path.dirname(os.path.abspath(__file__))
+font_bold = os.path.join(curr_dir, 'font.ttf')
+font_reg = os.path.join(curr_dir, 'font_regular.ttf')
+
+if os.path.exists(font_reg) and os.path.exists(font_bold):
+    try:
+        LabelBase.register(name='Roboto', fn_regular=font_reg, fn_bold=font_bold)
+    except Exception as e:
+        pass
 
 BG = (.025, .035, .075)
 PANEL = (.055, .075, .13)
@@ -136,10 +146,12 @@ class BrickBreakerGame(Widget):
 
     def text(self, key, text, x, y, w, h, size, color, bold=False, align='left'):
         if key not in self.labels:
-            self.labels[key] = Label(markup=True)
-            self.add_widget(self.labels[key])
+            label = Label(valign='middle')
+            self.labels[key] = label
+            self.add_widget(label)
         label = self.labels[key]
-        label.text = f'[b]{text}[/b]' if bold else text
+        label.text = str(text)
+        label.bold = bool(bold)
         label.color = (*color, 1) if len(color) == 3 else color
         label.font_size = max(1, size * self.scale)
         label.size = (w * self.scale, h * self.scale)
@@ -191,7 +203,7 @@ class BrickBreakerGame(Widget):
         keys.extend('drop' + str(i) for i in range(len(g.drops)))
         for key in keys:
             if key not in self.labels:
-                label = Label(valign='middle', font_name='Roboto')
+                label = Label(valign='middle')
                 self.labels[key] = label
                 self.add_widget(label)
         self.canvas.before.clear()
@@ -264,7 +276,7 @@ class BrickBreakerGame(Widget):
             if g.state == 'ready':
                 self.dot(g.paddle_x, 135, 6, WHITE)
                 self.text('ready', 'TOCA PARA LANZAR', 35, 265, 330, 36, 19, WHITE, True, 'center')
-                self.text('help', 'Desliz el dedo para mover la paleta', 35, 234, 330, 30, 13, MUTED, align='center')
+                self.text('help', 'Desliza para mover la paleta', 35, 234, 330, 30, 13, MUTED, align='center')
             footer = f'PALETA ANCHA  {g.wide_time:.0f}s' if g.wide_time else 'VELOCIDAD'
             self.text('footer', footer, 24, 20, 170, 40, 11, MUTED)
             self.speed_selector(200, 18, 56, 4)
@@ -282,13 +294,13 @@ class BrickBreakerGame(Widget):
                 titles = {'menu': 'BRICK\nBREAKER', 'paused': 'EN PAUSA', 'clear': 'NIVEL\nSUPERADO',
                           'over': 'OTRA\nOPORTUNIDAD', 'won': 'GALAXIA\nCOMPLETADA'}
                 self.text('title', titles[g.state], 48, 426, 304, 115, 34, WHITE, True)
-                subtitles = {'menu': '10 niveles. Tres vidas. Un nuevo rcord.\nRomp ladrillos y atrap bonificaciones.',
-                             'paused': 'Tomate un respiro.\nTu partida te espera.',
-                             'clear': f'{LEVELS[g.level][0]} completado\n+1 vida, hasta un mximo de 3',
-                             'over': f'Llegaste al nivel {g.level + 1} de 10.\nCada intento te lleva ms lejos.',
-                             'won': 'Superaste los 10 niveles.\nVolv a jugar para mejorar tu marca.'}
+                subtitles = {'menu': '20 niveles retro. Rompe los ladrillos y junta poderes.',
+                             'paused': 'Partida en pausa.\nToca continuar para seguir.',
+                             'clear': f'{LEVELS[g.level][0]} completado!\nSumaste 1 vida extra.',
+                             'over': f'Llegaste al nivel {g.level + 1} de {len(LEVELS)}.\nIntentalo otra vez!',
+                             'won': 'Felicitaciones!\nCompletaste todos los niveles.'}
                 self.text('subtitle', subtitles[g.state], 48, 349, 304, 68, 14, MUTED)
-                self.text('result', f'RCORD  {self.record:06d}' if g.state == 'menu' else f'PUNTOS  {g.score:06d}',
+                self.text('result', f'RECORD  {self.record:06d}' if g.state == 'menu' else f'PUNTOS  {g.score:06d}',
                           48, 319, 304, 30, 16, self.accent, True)
                 self.speed_selector(48, 274, 96, 8)
                 actions = {'menu': ('JUGAR', g.new_game), 'paused': ('CONTINUAR', g.resume),
@@ -300,7 +312,7 @@ class BrickBreakerGame(Widget):
                 if g.state == 'menu':
                     self.button('update_btn', 'BUSCAR ACTUALIZACION', 145, lambda: __import__('webbrowser').open("https://github.com/Xaoxay/pygame/releases/latest"))
                     
-                self.text('legend', 'BONUS:  + multibola    <> paleta ancha', 24, 105 if g.state == 'menu' else 125, 352, 30, 12, MUTED, align='center')
+                self.text('legend', 'PODERES:  + MULTIBOLA    <> PALETA ANCHA', 24, 105 if g.state == 'menu' else 125, 352, 30, 12, MUTED, align='center')
         for key, label in self.labels.items():
             if key not in self.used_labels:
                 label.opacity = 0
